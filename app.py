@@ -159,6 +159,7 @@ def generate_pdf(teacher_name, dept, filtered_df):
         row = [day]
         for slot in time_slots:
             if slot in ["11:10-11:40", "1:25-1:40"]:
+                # Always mark break explicitly per row
                 row.append("BREAK")
             else:
                 match = filtered_df[(filtered_df['Day'] == day) & (filtered_df['Time'] == slot)]
@@ -179,15 +180,14 @@ def generate_pdf(teacher_name, dept, filtered_df):
         ("FONTSIZE", (0, 0), (-1, -1), 9),
     ])
 
-    # Merge BREAK slots vertically (Sun-Thu)
+    # Highlight break slots (row-wise, not merged)
     break_slots = ["11:10-11:40", "1:25-1:40"]
     for slot in break_slots:
         col_idx = time_slots.index(slot)
-        style.add("SPAN", (col_idx, 1), (col_idx, len(days_order)))  # merge rows 1–5
-        style.add("VALIGN", (col_idx, 1), (col_idx, len(days_order)), "MIDDLE")
-        style.add("BACKGROUND", (col_idx, 1), (col_idx, len(days_order)), colors.lightgrey)
-        style.add("FONTNAME", (col_idx, 1), (col_idx, len(days_order)), "Helvetica-Bold")
-        style.add("TEXTCOLOR", (col_idx, 1), (col_idx, len(days_order)), colors.darkblue)
+        for row_idx in range(1, len(days_order) + 1):  # each day row
+            style.add("BACKGROUND", (col_idx, row_idx), (col_idx, row_idx), colors.lightgrey)
+            style.add("FONTNAME", (col_idx, row_idx), (col_idx, row_idx), "Helvetica-Bold")
+            style.add("TEXTCOLOR", (col_idx, row_idx), (col_idx, row_idx), colors.darkblue)
 
     table.setStyle(style)
     story.append(table)
@@ -195,6 +195,7 @@ def generate_pdf(teacher_name, dept, filtered_df):
     doc.build(story)
     buffer.seek(0)
     return buffer
+
 
 
 # ------------------------------
@@ -315,6 +316,7 @@ with tab2:
             )
     else:
         st.write("No routine found for the selected department/teacher.")
+
 
 
 
