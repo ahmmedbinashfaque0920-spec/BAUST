@@ -123,7 +123,7 @@ def generate_pdf(teacher_name, dept, filtered_df):
 
     styles = getSampleStyleSheet()
 
-    # Center and Title styles
+    # Centered text style
     center_style = ParagraphStyle(
         name="Center",
         parent=styles["Normal"],
@@ -153,13 +153,13 @@ def generate_pdf(teacher_name, dept, filtered_df):
     story.append(Paragraph(f"<b>Designation:</b> {designation}", center_style))
     story.append(Spacer(1, 12))
 
-    # Create table data
+    # Prepare table data
     table_data = [["Day"] + time_slots]
     for day in days_order:
         row = [day]
         for slot in time_slots:
             if slot in ["11:10-11:40", "1:25-1:40"]:
-                row.append("BREAK")  # show BREAK for these slots
+                row.append("BREAK")
             else:
                 match = filtered_df[(filtered_df['Day'] == day) & (filtered_df['Time'] == slot)]
                 if not match.empty:
@@ -168,7 +168,6 @@ def generate_pdf(teacher_name, dept, filtered_df):
                     row.append("")
         table_data.append(row)
 
-    # Create Table
     table = Table(table_data, repeatRows=1)
 
     style = TableStyle([
@@ -180,11 +179,11 @@ def generate_pdf(teacher_name, dept, filtered_df):
         ("FONTSIZE", (0, 0), (-1, -1), 9),
     ])
 
-    # Merge and style BREAK cells vertically
+    # Merge BREAK slots vertically (Sun-Thu)
     break_slots = ["11:10-11:40", "1:25-1:40"]
     for slot in break_slots:
         col_idx = time_slots.index(slot)
-        style.add("SPAN", (col_idx, 1), (col_idx, len(days_order)))  # merge over 5 rows
+        style.add("SPAN", (col_idx, 1), (col_idx, len(days_order)))  # merge rows 1–5
         style.add("VALIGN", (col_idx, 1), (col_idx, len(days_order)), "MIDDLE")
         style.add("BACKGROUND", (col_idx, 1), (col_idx, len(days_order)), colors.lightgrey)
         style.add("FONTNAME", (col_idx, 1), (col_idx, len(days_order)), "Helvetica-Bold")
@@ -316,6 +315,7 @@ with tab2:
             )
     else:
         st.write("No routine found for the selected department/teacher.")
+
 
 
 
