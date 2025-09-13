@@ -123,7 +123,6 @@ def generate_pdf(teacher_name, dept, filtered_df):
 
     styles = getSampleStyleSheet()
 
-    # Centered text style
     center_style = ParagraphStyle(
         name="Center",
         parent=styles["Normal"],
@@ -141,19 +140,17 @@ def generate_pdf(teacher_name, dept, filtered_df):
 
     story = []
 
-    # Title
+    # Title / faculty info
     story.append(Paragraph("<b>BAUST Khulna | July 2025</b>", title_style))
     story.append(Paragraph("Routine", title_style))
     story.append(Spacer(1, 12))
-
-    # Faculty info
     designation = faculty_metadata.get(teacher_name, {}).get("Designation", "N/A")
     story.append(Paragraph(f"<b>Faculty Member:</b> {teacher_name}", center_style))
     story.append(Paragraph(f"<b>Department:</b> {dept}", center_style))
     story.append(Paragraph(f"<b>Designation:</b> {designation}", center_style))
     story.append(Spacer(1, 12))
 
-    # Prepare table data
+    # Build table_data: header + one row per day
     table_data = [["Day"] + time_slots]
     for day in days_order:
         row = [day]
@@ -161,9 +158,9 @@ def generate_pdf(teacher_name, dept, filtered_df):
             if slot in ["11:10-11:40", "1:25-1:40"]:
                 row.append("BREAK")
             else:
-                match = filtered_df[(filtered_df['Day'] == day) & (filtered_df['Time'] == slot)]
+                match = filtered_df[(filtered_df["Day"] == day) & (filtered_df["Time"] == slot)]
                 if not match.empty:
-                    row.append("\n".join(match['Course'].tolist()))
+                    row.append("\n".join(match["Course"].tolist()))
                 else:
                     row.append("")
         table_data.append(row)
@@ -171,22 +168,23 @@ def generate_pdf(teacher_name, dept, filtered_df):
     table = Table(table_data, repeatRows=1)
 
     style = TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), colors.grey),      # header
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke), # header text
+        ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
         ("ALIGN", (0, 0), (-1, -1), "CENTER"),
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
     ])
 
-    # Style only the BREAK cells
-    break_slots = ["11:10-11:40", "1:25-1:40"]
-    for slot in break_slots:
-        col_idx = time_slots.index(slot)
-        for row_idx in range(1, len(days_order) + 1):  
-            style.add("BACKGROUND", (col_idx, row_idx), (col_idx, row_idx), colors.lightgrey)
-            style.add("FONTNAME", (col_idx, row_idx), (col_idx, row_idx), "Helvetica-Bold")
-            style.add("TEXTCOLOR", (col_idx, row_idx), (col_idx, row_idx), colors.darkblue)
+    # Apply styling only to cells that actually contain "BREAK"
+    for r_idx, row in enumerate(table_data):
+        # skip header row (r_idx == 0) if you don't want header treated
+        for c_idx, cell in enumerate(row):
+            if isinstance(cell, str) and cell.strip().upper() == "BREAK":
+                style.add("BACKGROUND", (c_idx, r_idx), (c_idx, r_idx), colors.lightgrey)
+                style.add("FONTNAME", (c_idx, r_idx), (c_idx, r_idx), "Helvetica-Bold")
+                style.add("TEXTCOLOR", (c_idx, r_idx), (c_idx, r_idx), colors.darkblue)
+                style.add("VALIGN", (c_idx, r_idx), (c_idx, r_idx), "MIDDLE")
 
     table.setStyle(style)
     story.append(table)
@@ -194,8 +192,6 @@ def generate_pdf(teacher_name, dept, filtered_df):
     doc.build(story)
     buffer.seek(0)
     return buffer
-
-
 
 # ------------------------------
 # Streamlit Interface
@@ -315,6 +311,7 @@ with tab2:
             )
     else:
         st.write("No routine found for the selected department/teacher.")
+
 
 
 
