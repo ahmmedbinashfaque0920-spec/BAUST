@@ -1,5 +1,4 @@
 # app.py
-pip install reportlab
 import pandas as pd
 import streamlit as st
 from reportlab.lib.pagesizes import A4
@@ -306,4 +305,5 @@ with tab2:
             )
     else:
         st.write("No routine found for the selected department/teacher.")
+
 
