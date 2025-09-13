@@ -1,8 +1,15 @@
 # app.py
 import pandas as pd
 import streamlit as st
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+import io
 
+# ------------------------------
 # Load CSV
+# ------------------------------
 CSV_PATH = "routine_clean_v3.csv"
 
 @st.cache_data
@@ -17,7 +24,9 @@ def load_data(path=CSV_PATH):
 
 df = load_data()
 
+# ------------------------------
 # Mapping short names to full names
+# ------------------------------
 full_name_mapping = {
     "MHKB": "MHKB Brigadier General Md Humayun Kabir Bhuiyan, psc",
     "MMHK": "Md. Mahamudul Hasan Khalid",
@@ -49,21 +58,151 @@ full_name_mapping = {
     "PM":"Ponkaj Mondol",
     "AR":"Ashikur Rahman",
     "UK":"Utpol Kumar",
+    "SHG":"Shiab Hossen Gaddafee",
 }
-
 df['Teacher'] = df['Teacher'].map(lambda x: full_name_mapping.get(x, x))
 
-# Pre-define department-wise faculty (example: CSE)
+# ------------------------------
+# Department-wise faculty
+# ------------------------------
 department_faculty = {
-    "CSE": ["Ashikur Rahman", "Syed Nahin Hossain", "Ahmmed Bin Ashfaque",
-            "Md. Masrafi Bin Seraj Sakib", "Md. Mehedi Rahman Rana", "Md. Mahamudul Hasan Khalid"]
-    # Add other departments if needed
+    "CSE": [
+        "Ashikur Rahman", "Syed Nahin Hossain", "Ahmmed Bin Ashfaque",
+        "Md. Masrafi Bin Seraj Sakib", "Md. Mehedi Rahman Rana", "Md. Mahamudul Hasan Khalid"
+    ],
+    "DBA": [
+        "Dr. Md. Jahangir Alam","Shiab Hossen Gaddafee"
+    ],
+    "ME": [
+        "Utpol Kumar","Ponkaj Mondol","Asif Hassan",
+        "MHKB Brigadier General Md Humayun Kabir Bhuiyan, psc",
+        "Dr. Khandkar Aftab Hossain","Mehedi Hasan"
+    ],
+    "CE": [
+        "Md. Sayeed Hasan","Dr. Nadim Reza Khandaker"
+    ],
+    "EEE": [
+        "Zahin Tazwar"
+    ]
 }
 
-# --- Streamlit Interface ---
+# ------------------------------
+# Faculty metadata (designation etc.)
+# ------------------------------
+faculty_metadata = {
+    "Ashikur Rahman": {"Dept": "CSE", "Designation": "Lecturer"},
+    "Syed Nahin Hossain": {"Dept": "CSE", "Designation": "Lecturer"},
+    "Ahmmed Bin Ashfaque": {"Dept": "CSE", "Designation": "Lecturer"},
+    "Md. Masrafi Bin Seraj Sakib": {"Dept": "CSE", "Designation": "Lecturer"},
+    "Md. Mehedi Rahman Rana": {"Dept": "CSE", "Designation": "Assistant Professor"},
+    "Md. Mahamudul Hasan Khalid": {"Dept": "CSE", "Designation": "Lecturer"},
+    "Dr. Md. Jahangir Alam": {"Dept": "DBA", "Designation": "Professor"},
+    "Shiab Hossen Gaddafee": {"Dept": "DBA", "Designation": "Lecturer"},
+    # Add other teachers with designation...
+}
+
+# ------------------------------
+# PDF Generator
+# ------------------------------
+time_slots = [
+    "8:30-9:20", "9:25-10:15", "10:20-11:10", "11:10-11:40",
+    "11:40-12:30", "12:35-1:25", "1:25-1:40", "1:40-2:30"
+]
+days_order = ["Sun", "Mon", "Tue", "Wed", "Thu"]
+
+import io
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.enums import TA_CENTER
+
+def generate_pdf(teacher_name, dept, filtered_df):
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+
+    styles = getSampleStyleSheet()
+
+    # Custom center styles
+    center_style = ParagraphStyle(
+        name="Center",
+        parent=styles["Normal"],
+        alignment=TA_CENTER,
+        fontSize=12,
+        spaceAfter=6,
+    )
+    title_style = ParagraphStyle(
+        name="TitleCenter",
+        parent=styles["Title"],
+        alignment=TA_CENTER,
+        fontSize=14,
+        spaceAfter=12,
+    )
+
+    story = []
+
+    # Title
+    story.append(Paragraph("<b>BAUST Khulna | July 2025</b>", title_style))
+    story.append(Paragraph("Routine", title_style))
+    story.append(Spacer(1, 12))
+
+    # Faculty info (centered)
+    designation = faculty_metadata.get(teacher_name, {}).get("Designation", "N/A")
+    story.append(Paragraph(f"<b>Faculty Member:</b> {teacher_name}", center_style))
+    story.append(Paragraph(f"<b>Department:</b> {dept}", center_style))
+    story.append(Paragraph(f"<b>Designation:</b> {designation}", center_style))
+    story.append(Spacer(1, 12))
+
+    # Create timetable grid
+    table_data = [["Day"] + time_slots]
+    for day in days_order:
+        row = [day]
+        for slot in time_slots:
+            match = filtered_df[(filtered_df['Day'] == day) & (filtered_df['Time'] == slot)]
+            if not match.empty:
+                courses = "\n".join(match['Course'].tolist())
+                row.append(courses)
+            else:
+                # leave break slots empty (will merge later)
+                if slot in ["11:10-11:40", "1:25-1:40"]:
+                    row.append("")
+                else:
+                    row.append("")
+        table_data.append(row)
+
+    table = Table(table_data, repeatRows=1)
+
+    style = TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+        ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+    ])
+
+    # --- Merge BREAK columns vertically ---
+    break_indices = [4, 7]  # index positions of "11:10-11:40" and "1:25-1:40"
+    for col in break_indices:
+        style.add("SPAN", (col, 1), (col, len(days_order)))
+        style.add("VALIGN", (col, 1), (col, len(days_order)), "MIDDLE")
+        style.add("BACKGROUND", (col, 0), (col, len(days_order)), colors.lightgrey)
+        # put BREAK label once at the top of merged span
+        table_data[1][col] = "BREAK"
+
+    table.setStyle(style)
+
+    story.append(table)
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+# ------------------------------
+# Streamlit Interface
+# ------------------------------
 st.title("BAUST Routine Management System")
 
-# Use Streamlit tabs
 tab1, tab2 = st.tabs(["Check Teacher Availability", "View Routine Table"])
 
 # ------------------------------
@@ -72,19 +211,15 @@ tab1, tab2 = st.tabs(["Check Teacher Availability", "View Routine Table"])
 with tab1:
     st.header("Check Teacher Availability (Busy / Free)")
 
-    # Day selector
     days = sorted(df['Day'].dropna().unique())
     selected_day = st.selectbox("Select Day", days, key="day_avail")
 
-    # Time slot selector
     times = sorted(df.loc[df['Day'] == selected_day, 'Time'].dropna().unique())
     selected_time = st.selectbox("Select Time slot", times, key="time_avail")
 
-    # Optional department filter
     dept_choices = ["(All)"] + sorted(df['Dept'].dropna().unique())
     selected_dept = st.selectbox("Filter by Dept. (optional)", dept_choices, key="dept_avail")
 
-    # Compute busy/free
     mask = (df['Day'] == selected_day) & (df['Time'] == selected_time)
     if selected_dept != "(All)":
         mask &= (df['Dept'] == selected_dept)
@@ -112,14 +247,11 @@ with tab1:
 with tab2:
     st.header("View Routine by Department or Teacher")
 
-    # Department selection
     dept_choices = ["(All)"] + sorted(df['Dept'].dropna().unique())
     selected_dept = st.selectbox("Select Department", dept_choices, key="dept_routine_tab")
 
-    # Teacher dropdown disabled if "(All)" selected
     teacher_disabled = selected_dept == "(All)"
 
-    # Teacher selection filtered by department
     if not teacher_disabled:
         if selected_dept in department_faculty:
             teachers_filtered = department_faculty[selected_dept]
@@ -136,7 +268,6 @@ with tab2:
         disabled=teacher_disabled
     )
 
-    # Filter DataFrame
     mask = pd.Series([True]*len(df))
     if not teacher_disabled and selected_teacher != "(All)":
         mask &= (df['Teacher'] == selected_teacher)
@@ -146,7 +277,6 @@ with tab2:
     filtered_df = df[mask]
 
     if not filtered_df.empty:
-        # Metadata
         st.markdown(f"**BAUST Khulna | July 2025**")
         if not teacher_disabled and selected_teacher != "(All)":
             st.markdown(f"**Faculty Member:** {selected_teacher}")
@@ -155,15 +285,23 @@ with tab2:
         elif selected_dept != "(All)":
             st.markdown(f"**Department:** {selected_dept}")
 
-        # Create timetable: days vs time slots
-        time_slots = sorted(filtered_df['Time'].unique())
-        days_order = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-        routine_table = pd.DataFrame(index=days_order, columns=time_slots)
+        time_slots_display = sorted(filtered_df['Time'].unique())
+        days_order_display = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+        routine_table = pd.DataFrame(index=days_order_display, columns=time_slots_display)
 
         for _, row in filtered_df.iterrows():
             routine_table.at[row['Day'], row['Time']] = row['Course']
 
         st.dataframe(routine_table.fillna(""))
 
+        # --- PDF download button ---
+        if not teacher_disabled and selected_teacher != "(All)":
+            pdf_buffer = generate_pdf(selected_teacher, selected_dept, filtered_df)
+            st.download_button(
+                label="📥 Download Routine as PDF",
+                data=pdf_buffer,
+                file_name=f"{selected_teacher}_routine.pdf",
+                mime="application/pdf"
+            )
     else:
         st.write("No routine found for the selected department/teacher.")
