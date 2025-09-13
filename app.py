@@ -123,7 +123,6 @@ def generate_pdf(teacher_name, dept, filtered_df):
 
     styles = getSampleStyleSheet()
 
-    # Custom center styles
     center_style = ParagraphStyle(
         name="Center",
         parent=styles["Normal"],
@@ -146,26 +145,24 @@ def generate_pdf(teacher_name, dept, filtered_df):
     story.append(Paragraph("Routine", title_style))
     story.append(Spacer(1, 12))
 
-    # Faculty info (centered)
+    # Faculty info
     designation = faculty_metadata.get(teacher_name, {}).get("Designation", "N/A")
     story.append(Paragraph(f"<b>Faculty Member:</b> {teacher_name}", center_style))
     story.append(Paragraph(f"<b>Department:</b> {dept}", center_style))
     story.append(Paragraph(f"<b>Designation:</b> {designation}", center_style))
     story.append(Spacer(1, 12))
 
-    # Create timetable grid
+    # Time slots and days
     table_data = [["Day"] + time_slots]
     for day in days_order:
         row = [day]
         for slot in time_slots:
-            match = filtered_df[(filtered_df['Day'] == day) & (filtered_df['Time'] == slot)]
-            if not match.empty:
-                courses = "\n".join(match['Course'].tolist())
-                row.append(courses)
+            if slot in ["11:10-11:40", "1:25-1:40"]:
+                row.append("BREAK")  # always show BREAK
             else:
-                # leave break slots empty (will merge later)
-                if slot in ["11:10-11:40", "1:25-1:40"]:
-                    row.append("")
+                match = filtered_df[(filtered_df['Day'] == day) & (filtered_df['Time'] == slot)]
+                if not match.empty:
+                    row.append("\n".join(match['Course'].tolist()))
                 else:
                     row.append("")
         table_data.append(row)
@@ -181,19 +178,17 @@ def generate_pdf(teacher_name, dept, filtered_df):
         ("FONTSIZE", (0, 0), (-1, -1), 9),
     ])
 
-    # --- Merge BREAK columns vertically ---
-    break_indices = [4, 7]  # index positions of "11:10-11:40" and "1:25-1:40"
+    # Merge BREAK cells vertically for 5 rows (Sun-Thu)
+    break_indices = [3, 6]  # column indices for "11:10-11:40" and "1:25-1:40"
     for col in break_indices:
-        style.add("SPAN", (col, 1), (col, len(days_order)))
-        style.add("VALIGN", (col, 1), (col, len(days_order)), "MIDDLE")
-        style.add("BACKGROUND", (col, 0), (col, len(days_order)), colors.lightgrey)
-        # put BREAK label once at the top of merged span
-        table_data[1][col] = "BREAK"
+        style.add("SPAN", (col, 1), (col, 5))  # merge from row 1 to row 5
+        style.add("VALIGN", (col, 1), (col, 5), "MIDDLE")
+        style.add("BACKGROUND", (col, 1), (col, 5), colors.lightgrey)
+        style.add("FONTNAME", (col, 1), (col, 5), "Helvetica-Bold")
+        style.add("TEXTCOLOR", (col, 1), (col, 5), colors.darkblue)
 
     table.setStyle(style)
-
     story.append(table)
-
     doc.build(story)
     buffer.seek(0)
     return buffer
@@ -316,6 +311,7 @@ with tab2:
             )
     else:
         st.write("No routine found for the selected department/teacher.")
+
 
 
 
