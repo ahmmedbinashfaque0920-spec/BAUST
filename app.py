@@ -123,6 +123,7 @@ def generate_pdf(teacher_name, dept, filtered_df):
 
     styles = getSampleStyleSheet()
 
+    # Center and Title styles
     center_style = ParagraphStyle(
         name="Center",
         parent=styles["Normal"],
@@ -152,13 +153,13 @@ def generate_pdf(teacher_name, dept, filtered_df):
     story.append(Paragraph(f"<b>Designation:</b> {designation}", center_style))
     story.append(Spacer(1, 12))
 
-    # Time slots and days
+    # Create table data
     table_data = [["Day"] + time_slots]
     for day in days_order:
         row = [day]
         for slot in time_slots:
             if slot in ["11:10-11:40", "1:25-1:40"]:
-                row.append("BREAK")  # show BREAK in every row
+                row.append("BREAK")  # show BREAK for these slots
             else:
                 match = filtered_df[(filtered_df['Day'] == day) & (filtered_df['Time'] == slot)]
                 if not match.empty:
@@ -167,6 +168,7 @@ def generate_pdf(teacher_name, dept, filtered_df):
                     row.append("")
         table_data.append(row)
 
+    # Create Table
     table = Table(table_data, repeatRows=1)
 
     style = TableStyle([
@@ -176,17 +178,21 @@ def generate_pdf(teacher_name, dept, filtered_df):
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
-        # Add color and style to BREAK columns
-        ("BACKGROUND", (time_slots.index("11:10-11:40"), 1), (time_slots.index("11:10-11:40"), len(days_order)), colors.lightgrey),
-        ("BACKGROUND", (time_slots.index("1:25-1:40"), 1), (time_slots.index("1:25-1:40"), len(days_order)), colors.lightgrey),
-        ("FONTNAME", (time_slots.index("11:10-11:40"), 1), (time_slots.index("11:10-11:40"), len(days_order)), "Helvetica-Bold"),
-        ("FONTNAME", (time_slots.index("1:25-1:40"), 1), (time_slots.index("1:25-1:40"), len(days_order)), "Helvetica-Bold"),
-        ("TEXTCOLOR", (time_slots.index("11:10-11:40"), 1), (time_slots.index("11:10-11:40"), len(days_order)), colors.darkblue),
-        ("TEXTCOLOR", (time_slots.index("1:25-1:40"), 1), (time_slots.index("1:25-1:40"), len(days_order)), colors.darkblue),
     ])
+
+    # Merge and style BREAK cells vertically
+    break_slots = ["11:10-11:40", "1:25-1:40"]
+    for slot in break_slots:
+        col_idx = time_slots.index(slot)
+        style.add("SPAN", (col_idx, 1), (col_idx, len(days_order)))  # merge over 5 rows
+        style.add("VALIGN", (col_idx, 1), (col_idx, len(days_order)), "MIDDLE")
+        style.add("BACKGROUND", (col_idx, 1), (col_idx, len(days_order)), colors.lightgrey)
+        style.add("FONTNAME", (col_idx, 1), (col_idx, len(days_order)), "Helvetica-Bold")
+        style.add("TEXTCOLOR", (col_idx, 1), (col_idx, len(days_order)), colors.darkblue)
 
     table.setStyle(style)
     story.append(table)
+
     doc.build(story)
     buffer.seek(0)
     return buffer
@@ -310,6 +316,7 @@ with tab2:
             )
     else:
         st.write("No routine found for the selected department/teacher.")
+
 
 
 
