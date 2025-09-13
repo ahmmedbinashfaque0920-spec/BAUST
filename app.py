@@ -158,7 +158,7 @@ def generate_pdf(teacher_name, dept, filtered_df):
         row = [day]
         for slot in time_slots:
             if slot in ["11:10-11:40", "1:25-1:40"]:
-                row.append("BREAK")  # always show BREAK
+                row.append("BREAK")  # show BREAK in every row
             else:
                 match = filtered_df[(filtered_df['Day'] == day) & (filtered_df['Time'] == slot)]
                 if not match.empty:
@@ -176,22 +176,21 @@ def generate_pdf(teacher_name, dept, filtered_df):
         ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
         ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
+        # Add color and style to BREAK columns
+        ("BACKGROUND", (time_slots.index("11:10-11:40"), 1), (time_slots.index("11:10-11:40"), len(days_order)), colors.lightgrey),
+        ("BACKGROUND", (time_slots.index("1:25-1:40"), 1), (time_slots.index("1:25-1:40"), len(days_order)), colors.lightgrey),
+        ("FONTNAME", (time_slots.index("11:10-11:40"), 1), (time_slots.index("11:10-11:40"), len(days_order)), "Helvetica-Bold"),
+        ("FONTNAME", (time_slots.index("1:25-1:40"), 1), (time_slots.index("1:25-1:40"), len(days_order)), "Helvetica-Bold"),
+        ("TEXTCOLOR", (time_slots.index("11:10-11:40"), 1), (time_slots.index("11:10-11:40"), len(days_order)), colors.darkblue),
+        ("TEXTCOLOR", (time_slots.index("1:25-1:40"), 1), (time_slots.index("1:25-1:40"), len(days_order)), colors.darkblue),
     ])
-
-    # Merge BREAK cells vertically for 5 rows (Sun-Thu)
-    break_indices = [3, 6]  # column indices for "11:10-11:40" and "1:25-1:40"
-    for col in break_indices:
-        style.add("SPAN", (col, 1), (col, 5))  # merge from row 1 to row 5
-        style.add("VALIGN", (col, 1), (col, 5), "MIDDLE")
-        style.add("BACKGROUND", (col, 1), (col, 5), colors.lightgrey)
-        style.add("FONTNAME", (col, 1), (col, 5), "Helvetica-Bold")
-        style.add("TEXTCOLOR", (col, 1), (col, 5), colors.darkblue)
 
     table.setStyle(style)
     story.append(table)
     doc.build(story)
     buffer.seek(0)
     return buffer
+
 
 # ------------------------------
 # Streamlit Interface
@@ -311,6 +310,7 @@ with tab2:
             )
     else:
         st.write("No routine found for the selected department/teacher.")
+
 
 
 
