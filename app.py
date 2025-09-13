@@ -199,7 +199,10 @@ def generate_pdf(teacher_name, dept, filtered_df):
 st.title("BAUST Routine Management System")
 
 #tab1, tab2 = st.tabs(["Check Teacher Availability", "View Routine Table"])
-tab2 = st.tabs(["View Routine Table"])
+#tab2 = st.tabs(["View Routine Table"])
+tabs = st.tabs(["View Routine Table"])
+tab2 = tabs[0]
+
 
 # ------------------------------
 # Tab 1: Check Teacher Availability
@@ -312,6 +315,7 @@ with tab2:
             )
     else:
         st.write("No routine found for the selected department/teacher.")
+
 
 
 
