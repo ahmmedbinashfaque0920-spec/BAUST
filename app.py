@@ -198,7 +198,8 @@ def generate_pdf(teacher_name, dept, filtered_df):
 # ------------------------------
 st.title("BAUST Routine Management System")
 
-tab1, tab2 = st.tabs(["Check Teacher Availability", "View Routine Table"])
+#tab1, tab2 = st.tabs(["Check Teacher Availability", "View Routine Table"])
+tab2 = st.tabs(["View Routine Table"])
 
 # ------------------------------
 # Tab 1: Check Teacher Availability
@@ -206,46 +207,46 @@ tab1, tab2 = st.tabs(["Check Teacher Availability", "View Routine Table"])
 # ------------------------------
 # Tab 1: Check Teacher Availability
 # ------------------------------
-with tab1:
-    st.header("Check Teacher Availability (Busy / Free)")
+#with tab1:
+#    st.header("Check Teacher Availability (Busy / Free)")
 
     # Add "Select..." as the first option
-    days = ["Select Day"] + sorted(df['Day'].dropna().unique())
-    selected_day = st.selectbox("Select Day", days, key="day_avail")
+#    days = ["Select Day"] + sorted(df['Day'].dropna().unique())
+#    selected_day = st.selectbox("Select Day", days, key="day_avail")
 
-    if selected_day != "Select Day":
-        times = ["Select Time"] + sorted(df.loc[df['Day'] == selected_day, 'Time'].dropna().unique())
-        selected_time = st.selectbox("Select Time slot", times, key="time_avail")
-    else:
-        selected_time = "Select Time"
+#    if selected_day != "Select Day":
+#        times = ["Select Time"] + sorted(df.loc[df['Day'] == selected_day, 'Time'].dropna().unique())
+#        selected_time = st.selectbox("Select Time slot", times, key="time_avail")
+#    else:
+#        selected_time = "Select Time"
 
-    dept_choices = ["Select Dept."] + sorted(df['Dept'].dropna().unique())
-    selected_dept = st.selectbox("Filter by Dept. (optional)", dept_choices, key="dept_avail")
+#    dept_choices = ["Select Dept."] + sorted(df['Dept'].dropna().unique())
+#    selected_dept = st.selectbox("Filter by Dept. (optional)", dept_choices, key="dept_avail")
 
     # Only apply mask if valid selections made
-    if selected_day != "Select Day" and selected_time != "Select Time":
-        mask = (df['Day'] == selected_day) & (df['Time'] == selected_time)
-        if selected_dept != "Select Dept.":
-            mask &= (df['Dept'] == selected_dept)
+#    if selected_day != "Select Day" and selected_time != "Select Time":
+#        mask = (df['Day'] == selected_day) & (df['Time'] == selected_time)
+#        if selected_dept != "Select Dept.":
+#            mask &= (df['Dept'] == selected_dept)
 
-        busy = sorted(df.loc[mask, 'Teacher'].dropna().unique())
-        all_teachers = sorted(df['Teacher'].dropna().unique())
-        free = [t for t in all_teachers if t not in busy]
+#        busy = sorted(df.loc[mask, 'Teacher'].dropna().unique())
+#        all_teachers = sorted(df['Teacher'].dropna().unique())
+#        free = [t for t in all_teachers if t not in busy]
 
-        st.subheader("Busy Teachers")
-        if busy:
-            st.write(busy)
-            st.table(df.loc[mask, ['Dept','Section','Time','Teacher','Course','Room']].drop_duplicates())
-        else:
-            st.write("No teachers scheduled (busy) for this slot.")
+#        st.subheader("Busy Teachers")
+#        if busy:
+#            st.write(busy)
+#            st.table(df.loc[mask, ['Dept','Section','Time','Teacher','Course','Room']].drop_duplicates())
+#        else:
+#            st.write("No teachers scheduled (busy) for this slot.")
 
-        st.subheader("Free Teachers")
-        if free:
-            st.write(free)
-        else:
-            st.write("No teachers are free (all are scheduled).")
-    else:
-        st.info("Please select Day and Time to check teacher availability.")
+#        st.subheader("Free Teachers")
+#        if free:
+#            st.write(free)
+#        else:
+#            st.write("No teachers are free (all are scheduled).")
+#    else:
+#        st.info("Please select Day and Time to check teacher availability.")
 
 # ------------------------------
 # Tab 2: View Routine Table
@@ -311,6 +312,7 @@ with tab2:
             )
     else:
         st.write("No routine found for the selected department/teacher.")
+
 
 
 
